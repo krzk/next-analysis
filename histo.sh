@@ -10,7 +10,7 @@ fi
 DB_PATH="$1"
 shift  # Remove first argument, leaving only commit IDs
 
-# Initialize array for counting numbers 0-14
+# Initialize array for counting numbers 0-14+
 declare -A counts
 for i in {0..14}; do
     counts[$i]=0
@@ -19,20 +19,26 @@ done
 # Initialize array to store commits with value 0
 declare -a zero_commits
 
+# Keep track of total commits
+total_commits=0
+
 # Process each commit ID
 for commit in "$@"; do
     # Get result from query-db.sh
     result=$(query-db.sh "$DB_PATH" "$commit")
     
-    # Validate result is a number between 0-14
-    if [ "$result" -gt 14 ]; then
-	    result=14
-    fi
-    if [[ "$result" =~ ^[0-9]+$ ]] && [ "$result" -ge 0 ] && [ "$result" -le 14 ]; then
-        ((counts[$result]++))
-        # Store commit ID if result is 0
-        if [ "$result" -eq 0 ]; then
-            zero_commits+=("$commit")
+    # Validate result is a number
+    if [[ "$result" =~ ^[0-9]+$ ]]; then
+        ((total_commits++))
+        # If result is greater than 14, count it in the 14+ category
+        if [ "$result" -gt 14 ]; then
+            ((counts[14]++))
+        else
+            ((counts[$result]++))
+            # Store commit ID if result is 0
+            if [ "$result" -eq 0 ]; then
+                zero_commits+=("$commit")
+            fi
         fi
     else
         echo "Warning: Invalid result '$result' for commit $commit" >&2
@@ -41,9 +47,14 @@ done
 
 # Find maximum count for scaling
 max_count=0
+# Find the last populated row
+last_populated=0
 for i in {0..14}; do
-    if [ "${counts[$i]}" -gt "$max_count" ]; then
-        max_count=${counts[$i]}
+    if [ "${counts[$i]}" -gt 0 ]; then
+        last_populated=$i
+        if [ "${counts[$i]}" -gt "$max_count" ]; then
+            max_count=${counts[$i]}
+        fi
     fi
 done
 
@@ -56,17 +67,17 @@ else
 fi
 
 # Print histogram
-echo "Days in -next:"
+echo "Days in linux-next:"
 echo "----------------------------------------"
-for i in {0..14}; do
+for i in $(seq 0 $last_populated); do
     # Calculate number of blocks to print
     blocks=$(bc -l <<< "${counts[$i]}*$factor" | cut -d. -f1)
     
-    # Print line with padding for number alignment
-    if [ $i -eq 14 ]; then
-	    printf "%2d+ | " "$i"
+    # Print line with padding for number alignment and special label for 14+
+    if [ "$i" -eq 14 ]; then
+        printf "14+| "
     else
-	    printf "%2d  | " "$i"
+        printf "%2d | " "$i"
     fi
     
     # Print blocks
@@ -80,10 +91,13 @@ for i in {0..14}; do
     fi
 done
 
-# Print commits with no days in -next
+# Print commits with value 0
 if [ ${#zero_commits[@]} -gt 0 ]; then
-    echo -e "\nCommits that didn't spend time in -next:"
-    echo "--------------------"
+    # Calculate percentage
+    percentage=$(bc -l <<< "scale=1; ${#zero_commits[@]}*100/$total_commits")
+    
+    echo -e "\nCommits with 0 days in linux-next (${#zero_commits[@]} of $total_commits: ${percentage}%):"
+    echo "--------------------------------"
     for commit in "${zero_commits[@]}"; do
         git log --oneline -n 1 "$commit"
     done
