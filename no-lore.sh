@@ -28,6 +28,9 @@ if ! git rev-parse --is-inside-work-tree &> /dev/null; then
     exit 1
 fi
 
+# Get total number of commits being processed
+total_commits=$#
+
 # Process each commit ID and store commits without URLs
 commits_without_urls=()
 for commit in "$@"; do
@@ -40,8 +43,15 @@ for commit in "$@"; do
     fi
 done
 
-# If we found any commits without URLs, print them using git log
+# If we found any commits without URLs, print header and commits
 if [ ${#commits_without_urls[@]} -gt 0 ]; then
+    # Calculate percentage
+    percentage=$(awk "BEGIN {printf \"%.0f\", (${#commits_without_urls[@]} / $total_commits) * 100}")
+    
+    # Print header with statistics
+    echo "Commits not found on lore.kernel.org/all (${#commits_without_urls[@]} of $total_commits: ${percentage}%)"
+    echo
+
     # Convert array to space-separated string
     commit_list="${commits_without_urls[*]}"
     # Use git log to print the commits in oneline format
