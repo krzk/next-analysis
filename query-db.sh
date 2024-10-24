@@ -15,6 +15,12 @@ if [ ! -d "$db_dir" ]; then
     exit 1
 fi
 
+# Special case: list all files if commit_id is "list-tags"
+if [ "$commit_id" = "list-tags" ]; then
+    ls "$db_dir"/next-* 2>/dev/null | sed "s#^${db_dir}/##" | sort
+    exit 0
+fi
+
 # Check if git command exists
 if ! command -v git &> /dev/null; then
     echo "Error: git command not found"
@@ -35,9 +41,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Find all matches and count unique files
+# Find all matches and print unique filenames without path
 {
     grep -l "^${commit_id}" "$db_dir"/next-* 2>/dev/null
     grep -l "^[^\t]*\t${patch_id}" "$db_dir"/next-* 2>/dev/null
     grep -l "^[^\t]*\t[^\t]*\t${subject_hash}" "$db_dir"/next-* 2>/dev/null
-} | sort -u | wc -l
+} | sed "s#^${db_dir}/##" | sort -u

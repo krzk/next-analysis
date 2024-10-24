@@ -22,26 +22,73 @@ declare -a zero_commits
 # Keep track of total commits
 total_commits=0
 
+# Helper function to convert next-YYYYMMDD to unix timestamp
+get_timestamp() {
+    local tag=$1
+    # Extract YYYYMMDD part from next-YYYYMMDD format
+    local date_str=${tag#next-}
+    # Convert to timestamp using date command
+    date -d "${date_str:0:4}-${date_str:4:2}-${date_str:6:2}" +%s
+}
+
+# Get today's timestamp
+today_ts=$(date +%s)
+
 # Process each commit ID
 for commit in "$@"; do
-    # Get result from query-db.sh
-    result=$(query-db.sh "$DB_PATH" "$commit")
+    # Get result string from query-db.sh
+    tags_str=$(query-db.sh "$DB_PATH" "$commit")
     
-    # Validate result is a number
-    if [[ "$result" =~ ^[0-9]+$ ]]; then
+    # If there are no tags, count as 0 days
+    if [ -z "$tags_str" ]; then
+        ((counts[0]++))
         ((total_commits++))
-        # If result is greater than 14, count it in the 14+ category
-        if [ "$result" -gt 14 ]; then
-            ((counts[14]++))
-        else
-            ((counts[$result]++))
-            # Store commit ID if result is 0
-            if [ "$result" -eq 0 ]; then
-                zero_commits+=("$commit")
-            fi
-        fi
+        zero_commits+=("$commit")
+        continue
+    fi
+
+    # Split tags into array and sort them
+    IFS=$'\n' read -d '' -r -a tags < <(echo "$tags_str" | tr ' ' '\n' | sort)
+
+    if [ ${#tags[@]} -eq 0 ]; then
+        ((counts[0]++))
+        ((total_commits++))
+        zero_commits+=("$commit")
+        continue
+    fi
+
+    # Get first timestamp
+    first_ts=$(get_timestamp "${tags[0]}")
+    
+    # For last timestamp: if commit is in the newest tag, use today's date
+    newest_tag=$(echo "$tags_str" | tr ' ' '\n' | sort | tail -n 1)
+    newest_tag_ts=$(get_timestamp "$newest_tag")
+    
+    # Check if this tag is the most recent chronologically
+    all_tags=$(query-db.sh "$DB_PATH" "list-tags")
+    most_recent_tag=$(echo "$all_tags" | tr ' ' '\n' | sort | tail -n 1)
+    most_recent_ts=$(get_timestamp "$most_recent_tag")
+    
+    if [ "$newest_tag_ts" -eq "$most_recent_ts" ]; then
+        last_ts=$today_ts
     else
-        echo "Warning: Invalid result '$result' for commit $commit" >&2
+        last_ts=$newest_tag_ts
+    fi
+    
+    # Calculate days difference
+    days=$(( (last_ts - first_ts) / 86400 ))
+
+    ((total_commits++))
+    
+    # If days is greater than 14, count in the 14+ category
+    if [ "$days" -gt 14 ]; then
+        ((counts[14]++))
+    else
+        ((counts[$days]++))
+        # Store commit ID if days is 0
+        if [ "$days" -eq 0 ]; then
+            zero_commits+=("$commit")
+        fi
     fi
 done
 
