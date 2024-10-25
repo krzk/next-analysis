@@ -11,7 +11,9 @@ DB_PATH="$1"
 shift  # Remove first argument, leaving only commit IDs
 
 # Initialize array for counting numbers 0-14+
+# Using -1 index for <1 day category
 declare -A counts
+counts[-1]=0  # <1 day category
 for i in {0..14}; do
     counts[$i]=0
 done
@@ -39,7 +41,7 @@ for commit in "$@"; do
     # Get result string from query-db.sh
     tags_str=$(query-db.sh "$DB_PATH" "$commit")
     
-    # If there are no tags, count as 0 days
+    # If there are no tags, count as 0 days (not found)
     if [ -z "$tags_str" ]; then
         ((counts[0]++))
         ((total_commits++))
@@ -80,12 +82,16 @@ for commit in "$@"; do
 
     ((total_commits++))
     
+    # If days is 0 and tags were found, count in <1 category
+    if [ "$days" -eq 0 ] && [ ! -z "$tags_str" ]; then
+        ((counts[-1]++))
+        zero_commits+=("$commit")
     # If days is greater than 14, count in the 14+ category
-    if [ "$days" -gt 14 ]; then
+    elif [ "$days" -gt 14 ]; then
         ((counts[14]++))
     else
         ((counts[$days]++))
-        # Store commit ID if days is 0
+        # Store commit ID if days is 0 (not found case)
         if [ "$days" -eq 0 ]; then
             zero_commits+=("$commit")
         fi
@@ -104,6 +110,10 @@ for i in {0..14}; do
         fi
     fi
 done
+# Check if <1 category should affect max_count
+if [ "${counts[-1]}" -gt "$max_count" ]; then
+    max_count=${counts[-1]}
+fi
 
 # Calculate scale factor (max 50 characters wide)
 scale=50
@@ -116,7 +126,29 @@ fi
 # Print histogram
 echo "Days in linux-next:"
 echo "----------------------------------------"
-for i in $(seq 0 $last_populated); do
+
+# Print 0 row first if it has entries
+if [ "${counts[0]}" -gt 0 ]; then
+    blocks=$(bc -l <<< "${counts[0]}*$factor" | cut -d. -f1)
+    printf " 0 | "
+    for ((j=0; j<blocks; j++)); do
+        printf "█"
+    done
+    printf " (%d)\n" "${counts[0]}"
+fi
+
+# Print <1 row next if it has entries
+if [ "${counts[-1]}" -gt 0 ]; then
+    blocks=$(bc -l <<< "${counts[-1]}*$factor" | cut -d. -f1)
+    printf "<1 | "
+    for ((j=0; j<blocks; j++)); do
+        printf "█"
+    done
+    printf " (%d)\n" "${counts[-1]}"
+fi
+
+# Print rest of histogram (starting from 1)
+for i in $(seq 1 $last_populated); do
     # Calculate number of blocks to print
     blocks=$(bc -l <<< "${counts[$i]}*$factor" | cut -d. -f1)
     
@@ -138,7 +170,7 @@ for i in $(seq 0 $last_populated); do
     fi
 done
 
-# Print commits with value 0
+# Print commits with value 0 or <1
 if [ ${#zero_commits[@]} -gt 0 ]; then
     # Calculate percentage
     percentage=$(bc -l <<< "scale=1; ${#zero_commits[@]}*100/$total_commits")
@@ -146,6 +178,7 @@ if [ ${#zero_commits[@]} -gt 0 ]; then
     echo -e "\nCommits with 0 days in linux-next (${#zero_commits[@]} of $total_commits: ${percentage}%):"
     echo "--------------------------------"
     for commit in "${zero_commits[@]}"; do
-        git log --oneline -n 1 "$commit"
+        git log --oneline --stat -n 1 "$commit"
+        echo  # Add blank line between commits for better readability
     done
 fi
