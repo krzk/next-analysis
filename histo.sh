@@ -132,7 +132,7 @@ if [ "${counts[0]}" -gt 0 ]; then
     blocks=$(bc -l <<< "${counts[0]}*$factor" | cut -d. -f1)
     printf " 0 | "
     for ((j=0; j<blocks; j++)); do
-        printf "█"
+        printf "+"
     done
     printf " (%d)\n" "${counts[0]}"
 fi
@@ -142,7 +142,7 @@ if [ "${counts[-1]}" -gt 0 ]; then
     blocks=$(bc -l <<< "${counts[-1]}*$factor" | cut -d. -f1)
     printf "<1 | "
     for ((j=0; j<blocks; j++)); do
-        printf "█"
+        printf "+"
     done
     printf " (%d)\n" "${counts[-1]}"
 fi
@@ -162,7 +162,7 @@ for i in $(seq 1 $last_populated); do
     # Print blocks
     if [ "$blocks" -gt 0 ]; then
         for ((j=0; j<blocks; j++)); do
-            printf "█"
+            printf "+"
         done
         printf " (%d)\n" "${counts[$i]}"
     else
