@@ -115,15 +115,14 @@ if [ "${counts[-1]}" -gt "$max_count" ]; then
     max_count=${counts[-1]}
 fi
 
-# Calculate scale factor (max 50 characters wide)
-scale=50
-if [ "$max_count" -gt 0 ]; then
-    factor=$(bc -l <<< "$scale/$max_count")
+# Only apply scaling if max_count exceeds 50
+if [ "$max_count" -gt 50 ]; then
+    factor=$(bc -l <<< "50/$max_count")
 else
-    factor=0
+    factor=1
 fi
 
-# Print histogram
+# Print histogram header
 echo "Days in linux-next:"
 echo "----------------------------------------"
 
@@ -179,6 +178,6 @@ if [ ${#zero_commits[@]} -gt 0 ]; then
     echo "--------------------------------"
     for commit in "${zero_commits[@]}"; do
         git log --oneline --stat -n 1 "$commit"
-        echo  # Add blank line between commits for better readability
+        echo
     done
 fi

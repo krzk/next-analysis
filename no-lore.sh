@@ -50,10 +50,12 @@ if [ ${#commits_without_urls[@]} -gt 0 ]; then
     
     # Print header with statistics
     echo "Commits not found on lore.kernel.org/all (${#commits_without_urls[@]} of $total_commits: ${percentage}%)"
-    echo
+    echo "----------------------------------------"
 
     # Convert array to space-separated string
     commit_list="${commits_without_urls[*]}"
     # Use git log to print the commits in oneline format
-    git log --oneline --no-walk $commit_list
+    git log --oneline --no-walk --stat $commit_list
+else
+    echo "I found all commits on vaious lore.kernel.org mailing lists."
 fi
