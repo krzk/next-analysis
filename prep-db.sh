@@ -11,6 +11,13 @@ DB_DIR="$1"
 # Create database directory if it doesn't exist
 mkdir -p "$DB_DIR"
 
+# Function to extract origin SHA1 from a tag
+get_origin_sha1() {
+    local tag="$1"
+    # Show contents of Next/SHA1s file in the tag and extract origin's SHA1
+    git show "$tag:Next/SHA1s" | awk '$1 == "origin" {print $2}'
+}
+
 # Get all tags matching the pattern "next-YYYYMMDD"
 git tag | grep "^next-[0-9]\{8\}" | while read -r tag; do
     output_file="$DB_DIR/$tag"
@@ -21,8 +28,16 @@ git tag | grep "^next-[0-9]\{8\}" | while read -r tag; do
         continue
     fi
     
-    # Get all non-merge commits between origin/master and the tag
-    git log --no-merges origin/master.."$tag" --format="%H" | while read -r commit; do
+    # Get the origin SHA1 from the tag's Next/SHA1s file
+    origin_sha1=$(get_origin_sha1 "$tag")
+    
+    if [ -z "$origin_sha1" ]; then
+        echo "Error: Could not find origin SHA1 in tag: $tag"
+        continue
+    fi
+    
+    # Get all non-merge commits between origin SHA1 and the tag
+    git log --no-merges "$origin_sha1".."$tag" --format="%H" | while read -r commit; do
         # Get patch ID for the commit with --stable flag
         patch_id=$(git show "$commit" | git patch-id --stable | cut -d' ' -f1)
         
