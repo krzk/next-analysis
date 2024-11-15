@@ -57,5 +57,5 @@ if [ ${#commits_without_urls[@]} -gt 0 ]; then
     # Use git log to print the commits in oneline format
     git log --oneline --no-walk --stat $commit_list
 else
-    echo "I found all commits on vaious lore.kernel.org mailing lists."
+    echo "I found all commits on various lore.kernel.org mailing lists."
 fi
