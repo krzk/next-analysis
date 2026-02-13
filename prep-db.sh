@@ -74,6 +74,6 @@ git tag | grep "^next-[0-9]\{8\}" |
     done
     echo "Waiting for ${#pids[@]} commands to finish ..."
     for pid in "${pids[@]}"; do
-        wait $pid
+        wait "$pid"
     done
 }
