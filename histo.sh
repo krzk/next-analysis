@@ -1,15 +1,14 @@
 #!/bin/bash
 
 # Check if correct number of arguments is provided
-if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <database-path> <commit-id1> [commit-id2 ...]"
+if [ "$#" -lt 1 ]; then
+    echo "Usage: $0 <commit-id1> [commit-id2 ...]"
     exit 1
 fi
 
 SELF="$(dirname "${BASH_SOURCE[0]}")"
 # Get database path from first argument
-DB_PATH="$1"
-shift  # Remove first argument, leaving only commit IDs
+DB_PATH="${SELF}/db"
 
 # Initialize array for counting numbers 0-14+
 # Using -1 index for <1 day category
