@@ -1,10 +1,14 @@
 #!/bin/bash
 
 # Check if directory parameter is provided
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <database-directory>"
+if [ $# -ne 0 ]; then
+    echo "Usage: $0"
     exit 1
 fi
+
+SELF="$(dirname "${BASH_SOURCE[0]}")"
+# Get database path from first argument
+DB_DIR="${SELF}/db"
 
 prep_db_tag() {
     local tag="$1"
@@ -47,8 +51,6 @@ prep_db_tag() {
         echo "Processed tag: $tag"
     fi
 }
-
-DB_DIR="$1"
 
 # Create database directory if it doesn't exist
 mkdir -p "$DB_DIR"
