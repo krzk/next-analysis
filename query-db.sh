@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
 
 # Check if correct number of arguments provided
 if [ $# -ne 2 ]; then

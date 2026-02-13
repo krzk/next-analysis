@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
 
 # Check if directory parameter is provided
 if [ $# -ne 0 ]; then

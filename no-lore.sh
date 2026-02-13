@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
 
 # Check if we have at least 2 arguments (db path and at least one commit)
 if [ $# -lt 2 ]; then
