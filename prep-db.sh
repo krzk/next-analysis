@@ -70,7 +70,7 @@ git tag | grep "^next-[0-9]\{8\}" |
     while read -r tag; do
         (prep_db_tag "$tag") &
         pid=$!
-        pids+=(${pid})
+        pids+=("${pid}")
     done
     echo "Waiting for ${#pids[@]} commands to finish ..."
     for pid in ${pids[@]}; do
