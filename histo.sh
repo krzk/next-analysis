@@ -6,6 +6,7 @@ if [ "$#" -lt 2 ]; then
     exit 1
 fi
 
+SELF="$(dirname "${BASH_SOURCE[0]}")"
 # Get database path from first argument
 DB_PATH="$1"
 shift  # Remove first argument, leaving only commit IDs
@@ -39,7 +40,7 @@ today_ts=$(date +%s)
 # Process each commit ID
 for commit in "$@"; do
     # Get result string from query-db.sh
-    tags_str=$(query-db.sh "$DB_PATH" "$commit")
+    tags_str=$("${SELF}/query-db.sh" "$DB_PATH" "$commit")
     
     # If there are no tags, count as 0 days (not found)
     if [ -z "$tags_str" ]; then
@@ -67,7 +68,7 @@ for commit in "$@"; do
     newest_tag_ts=$(get_timestamp "$newest_tag")
     
     # Check if this tag is the most recent chronologically
-    all_tags=$(query-db.sh "$DB_PATH" "list-tags")
+    all_tags=$("${SELF}/query-db.sh" "$DB_PATH" "list-tags")
     most_recent_tag=$(echo "$all_tags" | tr ' ' '\n' | sort | tail -n 1)
     most_recent_ts=$(get_timestamp "$most_recent_tag")
     
