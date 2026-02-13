@@ -6,26 +6,17 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-DB_DIR="$1"
-
-# Create database directory if it doesn't exist
-mkdir -p "$DB_DIR"
-
-# Function to extract origin SHA1 from a tag
-get_origin_sha1() {
+prep_db_tag() {
     local tag="$1"
-    # Show contents of Next/SHA1s file in the tag and extract origin's SHA1
-    git show "$tag:Next/SHA1s" | awk '$1 == "origin" {print $2}'
-}
 
-# Get all tags matching the pattern "next-YYYYMMDD"
-git tag | grep "^next-[0-9]\{8\}" | while read -r tag; do
+    test -n "$tag" || exit 1
+
     output_file="$DB_DIR/$tag"
     
     # Skip if file already exists
     if [ -f "$output_file" ]; then
         echo "Skipping existing file for tag: $tag"
-        continue
+        return 0
     fi
     
     # Get the origin SHA1 from the tag's Next/SHA1s file
@@ -33,7 +24,7 @@ git tag | grep "^next-[0-9]\{8\}" | while read -r tag; do
     
     if [ -z "$origin_sha1" ]; then
         echo "Error: Could not find origin SHA1 in tag: $tag"
-        continue
+        return 0
     fi
     
     # Get all non-merge commits between origin SHA1 and the tag
@@ -55,4 +46,32 @@ git tag | grep "^next-[0-9]\{8\}" | while read -r tag; do
     else
         echo "Processed tag: $tag"
     fi
-done
+}
+
+DB_DIR="$1"
+
+# Create database directory if it doesn't exist
+mkdir -p "$DB_DIR"
+
+# Function to extract origin SHA1 from a tag
+get_origin_sha1() {
+    local tag="$1"
+    # Show contents of Next/SHA1s file in the tag and extract origin's SHA1
+    git show "$tag:Next/SHA1s" | awk '$1 == "origin" {print $2}'
+}
+
+pids=()
+git tag | grep "^next-[0-9]\{8\}" |
+{
+    # "command | while loop" spawns subshell so counting pids needs to be in
+    # subshell as well.
+    while read -r tag; do
+        (prep_db_tag "$tag") &
+        pid=$!
+        pids+=(${pid})
+    done
+    echo "Waiting for ${#pids[@]} commands to finish ..."
+    for pid in ${pids[@]}; do
+        wait $pid
+    done
+}
