@@ -17,33 +17,33 @@ prep_db_tag() {
     test -n "$tag" || exit 1
 
     output_file="$DB_DIR/$tag"
-    
+
     # Skip if file already exists
     if [ -f "$output_file" ]; then
         echo "Skipping existing file for tag: $tag"
         return 0
     fi
-    
+
     # Get the origin SHA1 from the tag's Next/SHA1s file
     origin_sha1=$(get_origin_sha1 "$tag")
-    
+
     if [ -z "$origin_sha1" ]; then
         echo "Error: Could not find origin SHA1 in tag: $tag"
         return 0
     fi
-    
+
     # Get all non-merge commits between origin SHA1 and the tag
     git log --no-merges "$origin_sha1".."$tag" --format="%H" | while read -r commit; do
         # Get patch ID for the commit with --stable flag
         patch_id=$(git show "$commit" | git patch-id --stable | cut -d' ' -f1)
-        
+
         # Get commit subject and create hash
         subject_hash=$(git log -1 --format="%s" "$commit" | sha256sum | cut -d' ' -f1)
-        
+
         # Write to output file: commit_id patch_id subject_hash
         echo "$commit $patch_id $subject_hash" >> "$output_file"
     done
-    
+
     # Check if any commits were found and written
     if [ ! -s "$output_file" ]; then
         echo "No commits found for tag: $tag"
