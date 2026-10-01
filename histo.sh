@@ -160,7 +160,7 @@ for i in $(seq 1 $last_populated); do
     fi
 
     # Print blocks
-    if [ "$blocks" -gt 0 ]; then
+    if [ "$blocks" != "" ] && [ "$blocks" -gt 0 ]; then
         for ((j=0; j<blocks; j++)); do
             printf "+"
         done
