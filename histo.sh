@@ -41,7 +41,7 @@ today_ts=$(date +%s)
 for commit in "$@"; do
     # Get result string from query-db.sh
     tags_str=$("${SELF}/query-db.sh" "$DB_PATH" "$commit")
-    
+
     # If there are no tags, count as 0 days (not found)
     if [ -z "$tags_str" ]; then
         ((counts[0]++))
@@ -62,27 +62,27 @@ for commit in "$@"; do
 
     # Get first timestamp
     first_ts=$(get_timestamp "${tags[0]}")
-    
+
     # For last timestamp: if commit is in the newest tag, use today's date
     newest_tag=$(echo "$tags_str" | tr ' ' '\n' | sort | tail -n 1)
     newest_tag_ts=$(get_timestamp "$newest_tag")
-    
+
     # Check if this tag is the most recent chronologically
     all_tags=$("${SELF}/query-db.sh" "$DB_PATH" "list-tags")
     most_recent_tag=$(echo "$all_tags" | tr ' ' '\n' | sort | tail -n 1)
     most_recent_ts=$(get_timestamp "$most_recent_tag")
-    
+
     if [ "$newest_tag_ts" -eq "$most_recent_ts" ]; then
         last_ts=$today_ts
     else
         last_ts=$newest_tag_ts
     fi
-    
+
     # Calculate days difference
     days=$(( (last_ts - first_ts) / 86400 ))
 
     ((total_commits++))
-    
+
     # If days is 0 and tags were found, count in <1 category
     if [ "$days" -eq 0 ] && [ ! -z "$tags_str" ]; then
         ((counts[-1]++))
@@ -151,14 +151,14 @@ fi
 for i in $(seq 1 $last_populated); do
     # Calculate number of blocks to print
     blocks=$(bc -l <<< "${counts[$i]}*$factor" | cut -d. -f1)
-    
+
     # Print line with padding for number alignment and special label for 14+
     if [ "$i" -eq 14 ]; then
         printf "14+| "
     else
         printf "%2d | " "$i"
     fi
-    
+
     # Print blocks
     if [ "$blocks" -gt 0 ]; then
         for ((j=0; j<blocks; j++)); do
@@ -174,7 +174,7 @@ done
 if [ ${#zero_commits[@]} -gt 0 ]; then
     # Calculate percentage
     percentage=$(bc -l <<< "scale=1; ${#zero_commits[@]}*100/$total_commits")
-    
+
     echo -e "\nCommits with 0 days in linux-next (${#zero_commits[@]} of $total_commits: ${percentage}%):"
     echo "--------------------------------"
     for commit in "${zero_commits[@]}"; do
